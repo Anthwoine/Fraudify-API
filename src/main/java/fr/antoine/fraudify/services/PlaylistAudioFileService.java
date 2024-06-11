@@ -1,5 +1,6 @@
 package fr.antoine.fraudify.services;
 
+import fr.antoine.fraudify.exceptions.NotFoundException;
 import fr.antoine.fraudify.models.Track;
 import fr.antoine.fraudify.models.Playlist;
 import fr.antoine.fraudify.models.PlaylistTrack;
@@ -35,8 +36,14 @@ public class PlaylistAudioFileService {
         }
     }
 
-    public PlaylistTrack getPlaylistAudioFileById(PlaylistMusicId id) {
-        return playlistAudioFileRepository.findById(id).orElse(null);
+    public PlaylistTrack getPlaylistAudioFileById(String trackId, Integer playlistId) throws NotFoundException {
+        return playlistAudioFileRepository
+                .findById(PlaylistMusicId
+                    .builder()
+                    .playlist(playlistId)
+                    .track(trackId)
+                    .build()
+                ).orElseThrow(() -> new NotFoundException("Playlist audio file not found"));
     }
 
 }

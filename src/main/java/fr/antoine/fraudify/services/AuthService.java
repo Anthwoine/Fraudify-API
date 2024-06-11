@@ -55,6 +55,7 @@ public class AuthService {
                 .token(jwtService.generateToken(user))
                 .id(user.getUserId())
                 .username(user.getUsername())
+                .profilePicture(user.getProfilePicture())
                 .build();
     }
 }

@@ -1,7 +1,9 @@
 package fr.antoine.fraudify.controllers;
 
 import fr.antoine.fraudify.dto.VideoMetadata;
+import fr.antoine.fraudify.dto.mapper.TrackMapper;
 import fr.antoine.fraudify.exceptions.AlreadyExistTrackException;
+import fr.antoine.fraudify.exceptions.NotFoundException;
 import fr.antoine.fraudify.exceptions.TrackDownloadException;
 import fr.antoine.fraudify.models.Track;
 import fr.antoine.fraudify.dto.request.DownloadAudioRequest;
@@ -27,8 +29,12 @@ public class YoutubeDlController {
 
     private final TrackService trackService;
 
+    private final TrackMapper trackMapper;
+
     @PostMapping("/download-metadata")
-    public ResponseEntity<DownloadMetadataResponse> downloadMetadata(@Valid @RequestBody DownloadMetadataRequest request) {
+    public ResponseEntity<DownloadMetadataResponse> downloadMetadata(
+            @Valid @RequestBody DownloadMetadataRequest request
+    ) {
         VideoMetadata metadata = youtubeDlpUtil.downloadVideoMetadata(request.videoUrl());
         return ResponseEntity.ok(DownloadMetadataResponse.builder()
                 .metadata(metadata)
@@ -40,28 +46,28 @@ public class YoutubeDlController {
     @PostMapping("/download-audio")
     public ResponseEntity<DownloadAudioResponse> downloadAudio(
             @Valid @RequestBody DownloadAudioRequest request
-    ) throws AlreadyExistTrackException, TrackDownloadException {
+    ) throws AlreadyExistTrackException, TrackDownloadException, NotFoundException {
         VideoMetadata metadata = youtubeDlpUtil.downloadVideoMetadata(request.videoUrl());
 
         System.out.println(request);
         System.out.println(metadata);
 
-        if(trackService.getTrackById(metadata.id()) != null) {
+        if(trackService.trackExists(metadata.id())) {
             throw new AlreadyExistTrackException("Track already exist");
         }
 
         youtubeDlpUtil.downloadAudio(request.videoUrl(), metadata.id());
 
-        Track music = Track.builder()
+        Track track = Track.builder()
             .title(request.audioTitle())
             .artist(request.videoArtist())
             .duration(metadata.duration())
             .trackId(metadata.id())
             .build();
 
-        trackService.saveTrack(music);
+        trackService.saveTrack(track);
         return ResponseEntity.ok(DownloadAudioResponse.builder()
-            .music(music)
+            .track(trackMapper.trackDTOMapper(track))
             .message("Audio downloaded")
             .build());
     }

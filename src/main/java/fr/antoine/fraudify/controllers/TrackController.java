@@ -1,10 +1,14 @@
 package fr.antoine.fraudify.controllers;
 
+import fr.antoine.fraudify.dto.TrackDTO;
+import fr.antoine.fraudify.dto.mapper.TrackMapper;
+import fr.antoine.fraudify.dto.request.UpdateTrackRequest;
 import fr.antoine.fraudify.exceptions.NotFoundException;
 import fr.antoine.fraudify.models.Track;
 import fr.antoine.fraudify.services.TrackService;
 
-import fr.antoine.fraudify.utils.Patcher;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
@@ -18,7 +22,7 @@ import java.util.List;
 @RequestMapping("/api/track")
 public class TrackController {
     private final TrackService trackService;
-
+    private final TrackMapper trackMapper;
 
 
     @GetMapping("/")
@@ -27,36 +31,49 @@ public class TrackController {
     }
 
     @GetMapping("/{trackId}")
-    public ResponseEntity<Track> getTrackById(@PathVariable String trackId) {
-        return ResponseEntity.ok(trackService.getTrackById(trackId));
+    public ResponseEntity<TrackDTO> getTrackById(
+            @NotNull @NotBlank @PathVariable String trackId
+    ) throws NotFoundException {
+        Track track = trackService.getTrackById(trackId);
+        return ResponseEntity.ok(trackMapper.trackDTOMapper(track));
     }
 
-    @PutMapping("/{trackId}")
-    public ResponseEntity<Track> updateTrack(@PathVariable String trackId, @RequestBody Track track) {
-        track.setTrackId(trackId);
-        trackService.saveTrack(track);
-        return ResponseEntity.ok(track);
-    }
-
-    @PatchMapping("/{trackId}")
-    public ResponseEntity<Track> partialUpdateTrack(
-            @PathVariable String trackId,
-            @RequestBody Track track
+    @PutMapping("/")
+    public ResponseEntity<TrackDTO> updateTrack(
+            @RequestBody UpdateTrackRequest updateTrackRequest
     ) throws NotFoundException, NoSuchFieldException {
-        Track existingTrack = trackService.getTrackById("trackId");
-        if (existingTrack == null) {
-            throw new NotFoundException("Track not found");
-        }
+        Track updatedTrack = trackService.updateTrack(updateTrackRequest);
+        return ResponseEntity.ok(trackMapper.trackDTOMapper(updatedTrack));
+    }
 
-        Patcher.patchObject(existingTrack, track);
-        trackService.saveTrack(existingTrack);
-        return ResponseEntity.ok(existingTrack);
+    @PatchMapping("/")
+    public ResponseEntity<TrackDTO> partialUpdateTrack(
+            @RequestBody UpdateTrackRequest updateTrackRequest
+    ) throws NotFoundException, NoSuchFieldException {
+        Track patchedTrack = trackService.updateTrack(updateTrackRequest);
+        return ResponseEntity.ok(trackMapper.trackDTOMapper(patchedTrack));
     }
 
     @DeleteMapping("/{trackId}")
-    public ResponseEntity<String> deleteTrack(@PathVariable String trackId) {
+    public ResponseEntity<String> deleteTrack(
+            @NotNull @NotBlank @PathVariable String trackId
+    ) {
         trackService.deleteTrack(trackId);
         return ResponseEntity.ok("Track deleted");
     }
+
+    @GetMapping("/search-title")
+    public ResponseEntity<List<TrackDTO>> searchTrack(
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue= "0") int pageNumber
+    ) {
+        List<Track> tracks = trackService.searchTracksByTitle(query, pageSize, pageNumber);
+        return ResponseEntity.ok(tracks.stream()
+                .map(trackMapper::trackDTOMapper)
+                .collect(java.util.stream.Collectors.toList())
+        );
+    }
+
 
 }

@@ -6,5 +6,6 @@ import lombok.Builder;
 public record LoginResponse(
     Integer id,
     String username,
-    String token
+    String token,
+    String profilePicture
 ) {}

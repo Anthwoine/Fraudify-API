@@ -1,22 +1,32 @@
 package fr.antoine.fraudify.controllers;
 
+import fr.antoine.fraudify.dto.PlaylistDTO;
+import fr.antoine.fraudify.dto.mapper.PlaylistMapper;
+import fr.antoine.fraudify.dto.response.PlaylistTracksReponse;
 import fr.antoine.fraudify.exceptions.NotFoundException;
 import fr.antoine.fraudify.exceptions.TrackAlreadyInPlaylistException;
 import fr.antoine.fraudify.models.Track;
 import fr.antoine.fraudify.models.Playlist;
 import fr.antoine.fraudify.models.PlaylistTrack;
 import fr.antoine.fraudify.models.User;
-import fr.antoine.fraudify.models.id.PlaylistMusicId;
 import fr.antoine.fraudify.dto.request.CreatePlaylistRequest;
-import fr.antoine.fraudify.dto.response.AddAudioToPlaylistResponse;
-import fr.antoine.fraudify.dto.response.CreatePlaylistResponse;
 import fr.antoine.fraudify.services.TrackService;
 import fr.antoine.fraudify.services.PlaylistAudioFileService;
 import fr.antoine.fraudify.services.PlaylistService;
 import fr.antoine.fraudify.services.UserService;
+import fr.antoine.fraudify.utils.AuthenticatedUser;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/playlist")
@@ -26,96 +36,83 @@ public class PlaylistController {
     private final PlaylistAudioFileService playlistTrackService;
     private final TrackService trackService;
     private final UserService userService;
+    private final PlaylistMapper playlistMapper;
+    private final AuthenticatedUser authenticatedUser;
 
     @PostMapping("/")
-    public ResponseEntity<CreatePlaylistResponse> createPlaylist(@RequestBody CreatePlaylistRequest request) {
-        User owner = userService.getUserById(request.ownerId());
-        return ResponseEntity.ok(CreatePlaylistResponse.builder()
-            .createdPlaylist(playlistService.savePlaylist(Playlist.builder()
-                .playlistName(request.playlistName())
-                .playlistDescription(request.playlistDescription())
-                .playlistOwner(owner)
-                .isPrivate(request.isPrivate())
-                .build())
-            )
-            .message("Playlist created")
-            .build());
+    public ResponseEntity<PlaylistDTO> createPlaylist(
+            @Valid @RequestBody CreatePlaylistRequest request
+    ) {
+        User user = authenticatedUser.getAuthenticatedUser();
+        Playlist createdPlaylist = playlistService.createPlaylist(request, user);
+        return ResponseEntity.ok(playlistMapper.playlistDTOMapper(createdPlaylist));
     }
 
     @GetMapping("/{playlistId}")
-    public ResponseEntity<Playlist> getPlaylistById(@PathVariable Integer playlistId) throws NotFoundException {
-        Playlist playlist = playlistService.getPlaylistById(playlistId);
-        if (playlist == null) {
-            throw new NotFoundException("Playlist not found");
-        }
-        return ResponseEntity.ok(playlist);
-    }
-
-    @GetMapping("/owner/{ownerId}")
-    public ResponseEntity<?> getPlaylistsByOwner(@PathVariable Integer ownerId) throws NotFoundException {
-        User owner = userService.getUserById(ownerId);
-        if (owner == null) {
-            throw new NotFoundException("User not found");
-        }
-        return ResponseEntity.ok(playlistService.getPlaylistByOwner(owner));
-    }
-
-    @PostMapping("/{playlistId}/audio/{audioId}")
-    public ResponseEntity<AddAudioToPlaylistResponse> addAudioToPlaylist(
-            @PathVariable Integer playlistId,
-            @PathVariable String audioId
-    ) throws NotFoundException, TrackAlreadyInPlaylistException {
-        Playlist playlist = playlistService.getPlaylistById(playlistId);
-        if (playlist == null) {
-            throw new NotFoundException("Playlist not found");
-        }
-
-        Track music = trackService.getTrackById(audioId);
-        if (music == null) {
-            throw new NotFoundException("Audio not found");
-        }
-
-
-        if(playlistTrackService.getPlaylistAudioFileById(PlaylistMusicId
-                .builder()
-                .playlist(playlistId)
-                .track(audioId)
-                .build()) != null) {
-            throw new TrackAlreadyInPlaylistException("Audio already in playlist");
-        }
-
-        return ResponseEntity.ok(AddAudioToPlaylistResponse.builder()
-                .addedAudio(music)
-                .playlistTrack(playlistTrackService.addAudioToPlaylist(playlist, music))
-                .message("Audio added to playlist")
-                .build());
-    }
-
-    @DeleteMapping("/{playlistId}/audio/{audioId}")
-    public ResponseEntity<?> removeAudioFromPlaylist(
-            @PathVariable Integer playlistId,
-            @PathVariable String audioId
+    public ResponseEntity<PlaylistDTO> getPlaylistById(
+            @NotNull @PathVariable Integer playlistId
     ) throws NotFoundException {
         Playlist playlist = playlistService.getPlaylistById(playlistId);
-        if (playlist == null) {
-            throw new NotFoundException("Playlist not found");
-        }
+        return ResponseEntity.ok(playlistMapper.playlistDTOMapper(playlist));
+    }
 
-        Track track = trackService.getTrackById(audioId);
-        if (track == null) {
-            throw new NotFoundException("Audio not found");
-        }
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<PlaylistDTO>> getPlaylistsByUser(
+            @NotNull @PathVariable Integer userId
+    ) {
+        User user = userService.getUserById(userId);
+        List<Playlist> playlists = playlistService.getPlaylistByOwner(user);
+        return ResponseEntity.ok(playlists.stream()
+                .map(playlistMapper::playlistDTOMapper)
+                .collect(Collectors.toList())
+        );
+    }
 
-        PlaylistTrack playlistTrack = playlistTrackService.getPlaylistAudioFileById(PlaylistMusicId
-                .builder()
-                .playlist(playlistId)
-                .track(audioId)
-                .build());
-        if (playlistTrack == null) {
-            throw new NotFoundException("Audio not found in playlist");
-        }
+    @PostMapping("/{playlistId}/audio/{trackId}")
+    public ResponseEntity<String> addAudioToPlaylist(
+            @NotNull @PathVariable Integer playlistId,
+            @NotNull @NotBlank @PathVariable String trackId
+    ) throws NotFoundException {
+        Playlist playlist = playlistService.getPlaylistById(playlistId);
+        Track track = trackService.getTrackById(trackId);
+        playlistTrackService.addAudioToPlaylist(playlist, track);
+        return ResponseEntity.ok("Audio added to playlist");
+    }
 
+    @DeleteMapping("/{playlistId}/audio/{trackId}")
+    public ResponseEntity<String> removeAudioFromPlaylist(
+            @NotNull @PathVariable Integer playlistId,
+            @NotNull @NotBlank @PathVariable String trackId
+    ) throws NotFoundException {
+        Playlist playlist = playlistService.getPlaylistById(playlistId);
+        Track track = trackService.getTrackById(trackId);
+        PlaylistTrack playlistTrack = playlistTrackService.getPlaylistAudioFileById(trackId, playlistId);
         playlistTrackService.removeAudioFromPlaylist(playlistTrack);
         return ResponseEntity.ok("Audio removed from playlist");
+    }
+
+    @DeleteMapping("/{playlistId}")
+    public ResponseEntity<String> deletePlaylist(
+            @NotNull @PathVariable Integer playlistId
+    ) throws NotFoundException {
+        playlistService.getPlaylistById(playlistId);
+        playlistService.deletePlaylist(playlistId);
+        return ResponseEntity.ok("Playlist deleted");
+    }
+
+    @GetMapping("/{playlistId}/tracks")
+    public ResponseEntity<PlaylistTracksReponse> getPlaylistTracks(
+            @NotNull @PathVariable Integer playlistId
+    ) throws NotFoundException {
+        Playlist playlist = playlistService.getPlaylistById(playlistId);
+        List<PlaylistTrack> tracks = playlist.getTracks();
+        return ResponseEntity.ok(PlaylistTracksReponse.builder()
+                .playlist(playlistMapper.playlistDTOMapper(playlist))
+                .playlistTracks(tracks.stream()
+                        .map(playlistMapper::playlistTrackDTOMapper)
+                        .collect(Collectors.toList())
+                )
+                .build()
+        );
     }
 }

@@ -1,6 +1,6 @@
 package fr.antoine.fraudify.dto.request;
 
-import jakarta.validation.Valid;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

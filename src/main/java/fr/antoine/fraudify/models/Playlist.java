@@ -46,7 +46,7 @@ public class Playlist {
     @Column(
         name = "tracks"
     )
-    private List<PlaylistTrack> trakcs;
+    private List<PlaylistTrack> tracks;
 
 
     @Column(

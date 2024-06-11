@@ -56,6 +56,8 @@ public class User implements UserDetails {
     )
     private LocalDateTime createdAt;
 
+    private String profilePicture;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

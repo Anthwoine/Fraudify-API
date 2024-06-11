@@ -5,6 +5,7 @@ import fr.antoine.fraudify.dto.response.exceptions.ExceptionResponse;
 import fr.antoine.fraudify.exceptions.AlreadyExistTrackException;
 
 import fr.antoine.fraudify.exceptions.MetaDataDownloadException;
+import fr.antoine.fraudify.exceptions.NotFoundException;
 import fr.antoine.fraudify.exceptions.TrackDownloadException;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -99,6 +100,20 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         LOGGER.warning("Bad credentials");
+        return ExceptionResponse.builder()
+                .path(request.getRequestURI())
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(value = {NotFoundException.class})
+    public ExceptionResponse handleNotFoundException(
+            NotFoundException ex,
+            HttpServletRequest request
+    ) {
+        LOGGER.warning("Not found");
         return ExceptionResponse.builder()
                 .path(request.getRequestURI())
                 .message(ex.getMessage())
