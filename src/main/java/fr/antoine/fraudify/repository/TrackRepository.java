@@ -11,7 +11,10 @@ public interface TrackRepository extends JpaRepository<Track, String> {
 
     Page<Track> findAllByOrderByTitle(PageRequest pageRequest);
 
+    Page<Track> findAllByOrderByArtist(PageRequest pageRequest);
+
     Page<Track> findByTitleContainingOrderByTitle(String title, PageRequest pageRequest);
 
     Page<Track> findByArtistContainingOrderByArtist(String artist, PageRequest pageRequest);
+
 }

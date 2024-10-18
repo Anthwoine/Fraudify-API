@@ -75,5 +75,16 @@ public class TrackController {
         );
     }
 
-
+    @GetMapping("/search-artist")
+    public ResponseEntity<List<TrackDTO>> searchTrackByArtist(
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue= "0") int pageNumber
+    ) {
+        List<Track> tracks = trackService.searchTracksByArtist(query, pageSize, pageNumber);
+        return ResponseEntity.ok(tracks.stream()
+                .map(trackMapper::trackDTOMapper)
+                .collect(java.util.stream.Collectors.toList())
+        );
+    }
 }
