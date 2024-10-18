@@ -1,5 +1,6 @@
 package fr.antoine.fraudify.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import fr.antoine.fraudify.dto.VideoMetadata;
 import fr.antoine.fraudify.dto.mapper.TrackMapper;
 import fr.antoine.fraudify.exceptions.AlreadyExistTrackException;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URISyntaxException;
+
 @RestController
 @RequestMapping("/api/youtube-dl")
 @RequiredArgsConstructor
@@ -34,7 +37,7 @@ public class YoutubeDlController {
     @PostMapping("/download-metadata")
     public ResponseEntity<DownloadMetadataResponse> downloadMetadata(
             @Valid @RequestBody DownloadMetadataRequest request
-    ) {
+    ) throws URISyntaxException, JsonProcessingException {
         VideoMetadata metadata = youtubeDlpUtil.downloadVideoMetadata(request.videoUrl());
         return ResponseEntity.ok(DownloadMetadataResponse.builder()
                 .metadata(metadata)
@@ -46,7 +49,7 @@ public class YoutubeDlController {
     @PostMapping("/download-audio")
     public ResponseEntity<DownloadAudioResponse> downloadAudio(
             @Valid @RequestBody DownloadAudioRequest request
-    ) throws AlreadyExistTrackException, TrackDownloadException, NotFoundException {
+    ) throws AlreadyExistTrackException, TrackDownloadException, NotFoundException, URISyntaxException, JsonProcessingException {
         VideoMetadata metadata = youtubeDlpUtil.downloadVideoMetadata(request.videoUrl());
 
         System.out.println(request);
@@ -56,7 +59,7 @@ public class YoutubeDlController {
             throw new AlreadyExistTrackException("Track already exist");
         }
 
-        youtubeDlpUtil.downloadAudio(request.videoUrl(), metadata.id());
+        youtubeDlpUtil.downloadVideoAudio(request.videoUrl(), metadata.id());
 
         Track track = Track.builder()
             .title(request.audioTitle())

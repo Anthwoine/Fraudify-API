@@ -1,5 +1,8 @@
 package fr.antoine.fraudify.configs;
 
+import fr.antoine.fraudify.utils.osstrategie.LinuxStrategy;
+import fr.antoine.fraudify.utils.osstrategie.OsStrategy;
+import fr.antoine.fraudify.utils.osstrategie.WindowsStrategy;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
