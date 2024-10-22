@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 
 @RestController
@@ -37,7 +38,7 @@ public class YoutubeDlController {
     @PostMapping("/download-metadata")
     public ResponseEntity<DownloadMetadataResponse> downloadMetadata(
             @Valid @RequestBody DownloadMetadataRequest request
-    ) throws URISyntaxException, JsonProcessingException {
+    ) throws URISyntaxException, IOException {
         VideoMetadata metadata = youtubeDlpUtil.downloadVideoMetadata(request.videoUrl());
         return ResponseEntity.ok(DownloadMetadataResponse.builder()
                 .metadata(metadata)
@@ -49,7 +50,7 @@ public class YoutubeDlController {
     @PostMapping("/download-audio")
     public ResponseEntity<DownloadAudioResponse> downloadAudio(
             @Valid @RequestBody DownloadAudioRequest request
-    ) throws AlreadyExistTrackException, TrackDownloadException, NotFoundException, URISyntaxException, JsonProcessingException {
+    ) throws AlreadyExistTrackException, TrackDownloadException, NotFoundException, URISyntaxException, IOException {
         VideoMetadata metadata = youtubeDlpUtil.downloadVideoMetadata(request.videoUrl());
 
         System.out.println(request);
