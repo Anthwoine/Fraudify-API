@@ -21,10 +21,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -64,9 +67,9 @@ public class YoutubeDlpUtil {
         }
     }
 
-    public VideoMetadata downloadVideoMetadata(String videoUrl) throws URISyntaxException, JsonProcessingException {
+    public VideoMetadata downloadVideoMetadata(String videoUrl) throws URISyntaxException, IOException {
         VideoMetadata metadata = osStrategy.downloadMetadate(videoUrl);
-        downloadAudioImage(metadata.title(), metadata.channel(), false);
+        String image = downloadAudioImage(metadata.title(), metadata.channel(), true, metadata.id());
         return metadata;
     }
 
@@ -84,9 +87,12 @@ public class YoutubeDlpUtil {
 
     }
 
-    public void downloadAudioImage(String title, String artist, boolean download) throws URISyntaxException, JsonProcessingException {
+    public String downloadAudioImage(String title, String artist, boolean download, String id) throws URISyntaxException, IOException {
         String url = "http://ws.audioscrobbler.com/2.0/";
         String apiKey = "03ba2d7bf27a0b9b9c11b8a6d767c4ef";
+
+        artist = "Bring Me The Horizon";
+        title = "Top 10 staTues tHat CriEd bloOd";
 
         Map<String, String> params = new HashMap<>();
         params.put("method", "track.getInfo");
@@ -95,7 +101,10 @@ public class YoutubeDlpUtil {
         params.put("api_key", apiKey);
         params.put("format", "json");
 
-        URI uri = new URI(url + "?" + getQueryString(params));
+        String query = url + "?" + getQueryString(params);
+        System.out.println("query: " + query);
+
+        URI uri = new URI(query);
 
         ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
         String data = response.getBody();
@@ -107,21 +116,24 @@ public class YoutubeDlpUtil {
 
         if (jsonData.has("track") && jsonData.get("track").has("album")) {
             JsonNode images = jsonData.get("track").get("album").get("image");
-            String img = images.size() > 0 ? images.get(images.size() - 1).get("#text").asText() : null;
+            String img = !images.isEmpty() ? images.get(images.size() - 1).get("#text").asText() : null;
 
             if (img != null && download) {
                 System.out.println("image trouvée download...");
                 System.out.println(img);
-                //  downloadImage(img, title, artist); // Implemente cette méthode selon tes besoins
+                downloadImage(img, id); // Implemente cette méthode selon tes besoins
+                return img;
             } else if (img != null) {
                 System.out.println("image trouvée");
                 System.out.println(img);
-
+                return img;
             } else {
                 System.out.println("image non trouvée");
+                return null;
             }
         } else {
             System.out.println("image non trouvée");
+            return null;
         }
     }
 
@@ -141,5 +153,36 @@ public class YoutubeDlpUtil {
             }
         }
         return queryString.toString();
+    }
+
+    public void downloadImage(String imageUrl, String id) throws IOException {
+        // On spécifie le dossier où on veut enregistrer l'image
+        String outputFolder = "E:\\youtube-dl\\images\\";
+
+        // Déduire l'extension du fichier à partir de l'URL (si possible)
+        String extension = imageUrl.substring(imageUrl.lastIndexOf(".") + 1);
+        if (!extension.equals("png") && !extension.equals("jpg") && !extension.equals("jpeg")) {
+            extension = "png"; // Par défaut, on force le format PNG si l'extension n'est pas reconnue
+        }
+
+        // Nom complet du fichier de sortie
+        String fileName = outputFolder + id + "." + extension;
+
+        // Ouvre une connexion à l'URL
+        URL url = new URL(imageUrl);
+        try (InputStream in = url.openStream();
+             FileOutputStream out = new FileOutputStream(fileName)) {
+
+            // Télécharge et écrit le contenu de l'image dans le fichier
+            byte[] buffer = new byte[4096];
+            int n;
+            while ((n = in.read(buffer)) != -1) {
+                out.write(buffer, 0, n);
+            }
+            System.out.println("Image téléchargée avec succès : " + fileName);
+        } catch (IOException e) {
+            System.err.println("Erreur lors du téléchargement de l'image : " + e.getMessage());
+            throw e;
+        }
     }
 }

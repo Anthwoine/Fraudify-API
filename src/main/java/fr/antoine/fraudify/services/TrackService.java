@@ -63,4 +63,16 @@ public class TrackService {
 
         return tracks;
     }
+
+    public List<Track> searchTracksByArtist(String query, int pageSize, int pageNumber) {
+        List<Track> tracks = new ArrayList<>();
+        if(query == null) {
+            tracks = trackRepository.findAllByOrderByArtist(PageRequest.of(pageNumber, pageSize)).getContent();
+        } else {
+            tracks = trackRepository.findByArtistContainingOrderByArtist(query, PageRequest.of(pageNumber, pageSize)).getContent();
+
+        }
+
+        return tracks;
+    }
 }
