@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final UserDetails userDetails;
         boolean isTokenValid;
 
-        if(request.getServletPath().contains("/api/auth")) {
+        if(request.getServletPath().contains("/api/auth") || request.getServletPath().contains("api/hello")) {
             filterChain.doFilter(request, response);
             return;
         }
