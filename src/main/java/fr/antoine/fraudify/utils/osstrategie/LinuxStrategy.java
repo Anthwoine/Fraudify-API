@@ -11,11 +11,11 @@ public class LinuxStrategy extends OsStrategy {
     }
 
     public VideoMetadata downloadMetadate(String videoUrl) {
-        String userHome = System.getProperty("user.home");
-        String metadataFile = userHome + "/Documents/fraudify/metadata/metadata.json";
+        String youtubeDlPath = getYoutubeDlpConfig().getYoutubeDlPath();
+        String metadataFile = getYoutubeDlpConfig().getMetadataFilePath() + "metadata.json";
 
         String[] command = {
-                "yt-dlp",
+                youtubeDlPath,
                 "--dump-single-json",
                 "--no-playlist",
                 videoUrl
@@ -27,11 +27,11 @@ public class LinuxStrategy extends OsStrategy {
 
 
     public void downloadAudio(String videoUrl, String title) throws TrackDownloadException {
-        String userHome = System.getProperty("user.home");
-        String audioFile = userHome + "/Documents/fraudify/audio/" + title + ".m4a";
+        String youtubeDlPath = getYoutubeDlpConfig().getYoutubeDlPath();
+        String audioFile = getYoutubeDlpConfig().getAudioFilePath() + title + ".m4a";
 
         String[] command = {
-            "yt-dlp",
+            youtubeDlPath,
             "-f", "bestaudio",
             "--audio-format", "m4a",
             "--no-playlist",
